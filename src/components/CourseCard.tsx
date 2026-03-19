@@ -50,10 +50,10 @@ export default function CourseCard({ course, teeTimes = [], showTeeTimes = true 
           {course.city}, {course.province}
         </p>
 
-        <div className="flex items-center gap-1 mb-3">
-          <span className="text-yellow-500 text-sm">{"★".repeat(Math.floor(course.rating))}</span>
-          <span className="text-sm text-gray-600 dark:text-slate-300">{course.rating}</span>
-          <span className="text-sm text-gray-400 dark:text-slate-500">({course.reviewCount} reviews)</span>
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          <span className="text-yellow-500 text-sm shrink-0">{"★".repeat(Math.floor(course.rating))}</span>
+          <span className="text-sm text-gray-600 dark:text-slate-300 shrink-0">{course.rating}</span>
+          <span className="text-sm text-gray-400 dark:text-slate-500 shrink-0">({course.reviewCount} reviews)</span>
         </div>
 
         <div className="flex flex-wrap gap-1 mb-3">
