@@ -17,7 +17,7 @@ export default function NotificationSetup({ courseName, onClose, onAlertSet }: N
   const { isPro } = useUser();
   const [type, setType] = useState<AlertType>("cancellation");
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
-  const [timeWindow, setTimeWindow] = useState("any");
+  const [timeWindows, setTimeWindows] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState("");
   const [channels, setChannels] = useState({ email: true, sms: true, push: false });
   const [step, setStep] = useState<"config" | "preview" | "confirmed">("config");
@@ -49,7 +49,7 @@ export default function NotificationSetup({ courseName, onClose, onAlertSet }: N
 
   // Generate a realistic notification preview
   const getPreviewMessage = () => {
-    const time = timeWindow === "morning" ? "8:12 AM" : timeWindow === "afternoon" ? "1:24 PM" : "10:36 AM";
+    const time = timeWindows.includes("morning") ? "8:12 AM" : timeWindows.includes("afternoon") ? "1:24 PM" : "10:36 AM";
     const name = courseName || "Glen Abbey Golf Course";
     switch (type) {
       case "cancellation":
@@ -158,7 +158,10 @@ export default function NotificationSetup({ courseName, onClose, onAlertSet }: N
           <div className="flex justify-between">
             <span className="text-gray-500 dark:text-slate-400">Time Window</span>
             <span className="text-gray-900 dark:text-white font-medium">
-              {timeWindow === "any" ? "Any Time" : timeWindow === "morning" ? "Morning (6-11am)" : timeWindow === "afternoon" ? "Afternoon (11am-3pm)" : "Twilight (3pm+)"}
+              {timeWindows.length === 0 ? "Any Time" : timeWindows.map((tw) => {
+                const labels: Record<string, string> = { early_morning: "Early Morning", morning: "Morning", afternoon: "Afternoon", evening: "Twilight" };
+                return labels[tw] || tw;
+              }).join(", ")}
             </span>
           </div>
           {selectedDates.length > 0 && (
@@ -277,20 +280,38 @@ export default function NotificationSetup({ courseName, onClose, onAlertSet }: N
         </div>
       </div>
 
-      {/* Time Window */}
+      {/* Time Window - Multi Select */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Time window</label>
-        <select
-          value={timeWindow}
-          onChange={(e) => setTimeWindow(e.target.value)}
-          className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-slate-700"
-        >
-          <option value="any">Any Time</option>
-          <option value="early_morning">Early Morning (6-8am)</option>
-          <option value="morning">Morning (8-11am)</option>
-          <option value="afternoon">Afternoon (11am-3pm)</option>
-          <option value="evening">Twilight (3pm+)</option>
-        </select>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+          Time windows <span className="text-gray-400 font-normal">(select multiple)</span>
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {([
+            { value: "early_morning", label: "Early (6-8am)" },
+            { value: "morning", label: "Morning (8-11am)" },
+            { value: "afternoon", label: "Afternoon (11-3pm)" },
+            { value: "evening", label: "Twilight (3pm+)" },
+          ]).map((tw) => (
+            <button
+              key={tw.value}
+              onClick={() =>
+                setTimeWindows((prev) =>
+                  prev.includes(tw.value) ? prev.filter((t) => t !== tw.value) : [...prev, tw.value]
+                )
+              }
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                timeWindows.includes(tw.value)
+                  ? "bg-emerald-600 text-white"
+                  : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+              }`}
+            >
+              {tw.label}
+            </button>
+          ))}
+        </div>
+        {timeWindows.length === 0 && (
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">No selection = any time</p>
+        )}
       </div>
 
       {/* Price threshold for price_drop */}
