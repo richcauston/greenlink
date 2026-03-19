@@ -79,7 +79,7 @@ export default function FilterSidebar({
 
       <div>
         <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Minimum Rating</h3>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {[0, 3, 3.5, 4, 4.5].map((r) => (
             <button
               key={r}
@@ -87,7 +87,7 @@ export default function FilterSidebar({
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 minRating === r
                   ? "bg-emerald-600 text-white"
-                  : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+                  : "bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-500"
               }`}
             >
               {r === 0 ? "Any" : `${r}+`}
