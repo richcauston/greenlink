@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "greenlink-dev",
+      "runtimeExecutable": "/Users/richardcauston/.fnm/fnm",
+      "runtimeArgs": ["exec", "--", "npm", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}
