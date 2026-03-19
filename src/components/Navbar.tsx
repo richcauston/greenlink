@@ -80,7 +80,7 @@ export default function Navbar() {
               href="/login"
               className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm"
             >
-              Sign In
+              Join Waitlist
             </Link>
           </div>
 
@@ -131,7 +131,7 @@ export default function Navbar() {
               className="block px-3 py-2 bg-emerald-600 text-white rounded-lg text-center"
               onClick={() => setMenuOpen(false)}
             >
-              Sign In
+              Join Waitlist
             </Link>
           </div>
         )}
