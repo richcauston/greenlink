@@ -56,15 +56,43 @@ export interface SearchParams {
   players: number;
 }
 
+export type AlertType = "any_opening" | "cancellation" | "specific_time" | "price_drop";
+
+export const ALERT_TYPE_LABELS: Record<AlertType, string> = {
+  any_opening: "Any Opening",
+  cancellation: "Cancellation",
+  specific_time: "Specific Time",
+  price_drop: "Price Drop",
+};
+
 export interface UserAlert {
   id: string;
   courseId: string;
   courseName: string;
-  type: "any_opening" | "specific_time" | "price_drop";
-  preferredDate?: string;
-  preferredTime?: string;
+  type: AlertType;
+  preferredDates?: string[];
+  preferredTimeWindow?: string; // e.g. "morning", "afternoon"
+  maxPrice?: number;
+  notifyVia: {
+    email: boolean;
+    sms: boolean;
+    push: boolean;
+  };
   active: boolean;
+  createdAt: string;
 }
+
+export interface AlertEvent {
+  id: string;
+  alertId: string;
+  courseName: string;
+  message: string;
+  time: string;
+  channel: "email" | "sms" | "push";
+  read: boolean;
+}
+
+export type UserTier = "free" | "pro";
 
 export interface Booking {
   id: string;

@@ -3,9 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { courses } from "@/data/courses";
-import { Course } from "@/types";
+import { Course, ALERT_TYPE_LABELS } from "@/types";
 import CourseCard from "@/components/CourseCard";
 import SearchBar from "@/components/SearchBar";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import AlertSimulation from "@/components/AlertSimulation";
+import { useUser } from "@/lib/user-context";
 
 const mockBookings = [
   {
@@ -30,15 +33,25 @@ const mockBookings = [
   },
 ];
 
-const mockAlerts = [
-  { id: "a1", courseId: "cabot-cliffs", courseName: "Cabot Cliffs", type: "any_opening", active: true },
-  { id: "a2", courseId: "stewart-creek", courseName: "Stewart Creek Golf & Country Club", type: "price_drop", active: true },
-  { id: "a3", courseId: "kananaskis", courseName: "Kananaskis Country Golf Course", type: "specific_time", active: false },
+const mockProAlerts = [
+  { id: "a1", courseId: "cabot-cliffs", courseName: "Cabot Cliffs", type: "cancellation" as const, active: true, channels: "SMS & Email", created: "2 days ago" },
+  { id: "a2", courseId: "stewart-creek", courseName: "Stewart Creek Golf & Country Club", type: "price_drop" as const, active: true, channels: "SMS", created: "5 days ago" },
+  { id: "a3", courseId: "kananaskis", courseName: "Kananaskis Country Golf Course", type: "specific_time" as const, active: true, channels: "Email", created: "1 week ago" },
+  { id: "a4", courseId: "glen-abbey", courseName: "Glen Abbey Golf Course", type: "any_opening" as const, active: false, channels: "Push", created: "2 weeks ago" },
+];
+
+const mockAlertHistory = [
+  { id: "h1", time: "Today, 10:34 AM", courseName: "Cabot Cliffs", message: "8:00 AM slot opened — cancellation detected", channel: "SMS", booked: true },
+  { id: "h2", time: "Yesterday, 3:12 PM", courseName: "Stewart Creek", message: "Price dropped to $89 (was $139)", channel: "Email", booked: false },
+  { id: "h3", time: "Mar 16, 9:45 AM", courseName: "Kananaskis", message: "10:30 AM slot available — 3 spots", channel: "Email", booked: true },
+  { id: "h4", time: "Mar 15, 7:22 AM", courseName: "Cabot Cliffs", message: "7:15 AM early morning slot opened", channel: "SMS", booked: false },
 ];
 
 export default function DashboardPage() {
+  const { isPro } = useUser();
   const [favorites, setFavorites] = useState<Course[]>([]);
   const [activeTab, setActiveTab] = useState<"bookings" | "favorites" | "alerts">("bookings");
+  const [showSimulation, setShowSimulation] = useState(false);
 
   useEffect(() => {
     const favIds: string[] = JSON.parse(localStorage.getItem("greenlink_favorites") || "[]");
@@ -51,15 +64,34 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-            <p className="text-gray-500 dark:text-slate-400">Welcome back! Manage your bookings, favorites, and alerts.</p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+              {isPro && (
+                <span className="px-2.5 py-0.5 bg-violet-100 dark:bg-violet-900/40 text-violet-800 dark:text-violet-300 text-xs font-bold rounded-full border border-violet-300 dark:border-violet-700">
+                  PRO
+                </span>
+              )}
+            </div>
+            <p className="text-gray-500 dark:text-slate-400">
+              {isPro ? "Manage your bookings, alerts, and favourites." : "Welcome back! Manage your bookings and favourites."}
+            </p>
           </div>
-          <Link
-            href="/search"
-            className="bg-emerald-600 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
-          >
-            Find Tee Times
-          </Link>
+          <div className="flex gap-2">
+            {isPro && (
+              <button
+                onClick={() => setShowSimulation(true)}
+                className="bg-violet-100 dark:bg-violet-900/40 text-violet-800 dark:text-violet-300 px-4 py-2.5 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/60 transition-colors font-medium text-sm border border-violet-300 dark:border-violet-700"
+              >
+                Simulate Alert
+              </button>
+            )}
+            <Link
+              href="/search"
+              className="bg-emerald-600 text-white px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+            >
+              Find Tee Times
+            </Link>
+          </div>
         </div>
 
         {/* Quick Search */}
@@ -79,7 +111,7 @@ export default function DashboardPage() {
                   : "text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              {tab}
+              {tab === "alerts" && isPro ? "Alerts (3)" : tab}
             </button>
           ))}
         </div>
@@ -119,10 +151,7 @@ export default function DashboardPage() {
                   <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium border border-emerald-200">
                     {booking.status}
                   </span>
-                  <Link
-                    href={`/course/${booking.courseId}`}
-                    className="text-sm text-emerald-600 hover:underline"
-                  >
+                  <Link href={`/course/${booking.courseId}`} className="text-sm text-emerald-600 hover:underline">
                     View Course
                   </Link>
                 </div>
@@ -158,71 +187,125 @@ export default function DashboardPage() {
         {/* Alerts Tab */}
         {activeTab === "alerts" && (
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your Alerts</h2>
-              <Link href="/search" className="text-sm text-emerald-600 hover:underline">
-                + New Alert
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {mockAlerts.map((alert) => (
-                <div key={alert.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${alert.active ? "bg-emerald-100" : "bg-gray-100"}`}>
-                      <svg className={`w-5 h-5 ${alert.active ? "text-emerald-600" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{alert.courseName}</p>
-                      <p className="text-sm text-gray-500 dark:text-slate-400">
-                        {alert.type === "any_opening" && "Any opening"}
-                        {alert.type === "price_drop" && "Price drop"}
-                        {alert.type === "specific_time" && "Specific time"}
-                      </p>
-                    </div>
+            {!isPro ? (
+              /* Free User — Upgrade Prompt */
+              <UpgradePrompt />
+            ) : (
+              /* Pro User — Full Alert Management */
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your Alerts</h2>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
+                      {mockProAlerts.filter((a) => a.active).length} active alerts
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-xs px-2 py-1 rounded-full ${alert.active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500 dark:text-slate-400"}`}>
-                      {alert.active ? "Active" : "Paused"}
-                    </span>
-                    <button className="text-gray-400 hover:text-red-500 transition-colors">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                  <Link
+                    href="/search"
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                  >
+                    + New Alert
+                  </Link>
+                </div>
+
+                {/* Active Alerts */}
+                <div className="space-y-3 mb-8">
+                  {mockProAlerts.map((alert) => (
+                    <div key={alert.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-4 flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${alert.active ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-gray-100 dark:bg-slate-700"}`}>
+                          <svg className={`w-5 h-5 ${alert.active ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{alert.courseName}</p>
+                          <p className="text-sm text-gray-500 dark:text-slate-400">
+                            {ALERT_TYPE_LABELS[alert.type]} &middot; {alert.channels} &middot; Set {alert.created}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                          alert.active
+                            ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                            : "bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400"
+                        }`}>
+                          {alert.active ? "Active" : "Paused"}
+                        </span>
+                        <button className="text-gray-400 hover:text-red-500 transition-colors">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Alert Activity History */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Alert Activity
+                  </h3>
+                  <div className="space-y-4">
+                    {mockAlertHistory.map((event) => (
+                      <div key={event.id} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                            event.booked
+                              ? "bg-emerald-100 dark:bg-emerald-900/40"
+                              : "bg-gray-100 dark:bg-slate-700"
+                          }`}>
+                            {event.booked ? (
+                              <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{event.courseName}</p>
+                            <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">
+                              via {event.channel}
+                            </span>
+                            {event.booked && (
+                              <span className="text-xs px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full font-medium">
+                                Booked
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-slate-300">{event.message}</p>
+                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{event.time}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Notification Preferences */}
-            <div className="mt-8 bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Notification Preferences</h3>
-              <div className="space-y-3">
-                {[
-                  { label: "Email notifications", desc: "Receive alerts via email", defaultChecked: true },
-                  { label: "SMS notifications", desc: "Receive alerts via text message", defaultChecked: true },
-                  { label: "Push notifications", desc: "Receive alerts in your browser", defaultChecked: false },
-                  { label: "Weekly digest", desc: "Summary of upcoming availability", defaultChecked: true },
-                ].map((pref) => (
-                  <label key={pref.label} className="flex items-center justify-between cursor-pointer">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{pref.label}</p>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">{pref.desc}</p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked={pref.defaultChecked}
-                      className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
       </div>
+
+      {/* Alert Simulation Toast */}
+      {showSimulation && (
+        <AlertSimulation
+          courseName="Cabot Cliffs"
+          courseId="cabot-cliffs"
+          time="8:00 AM"
+          price={165}
+          onDismiss={() => setShowSimulation(false)}
+        />
+      )}
     </div>
   );
 }

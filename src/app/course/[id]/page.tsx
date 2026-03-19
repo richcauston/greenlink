@@ -10,6 +10,7 @@ import TeeTimeSlot from "@/components/TeeTimeSlot";
 import BookingModal from "@/components/BookingModal";
 import FavoriteButton from "@/components/FavoriteButton";
 import NotificationSetup from "@/components/NotificationSetup";
+import AlertSimulation from "@/components/AlertSimulation";
 import Link from "next/link";
 
 export default function CourseDetailPage() {
@@ -20,6 +21,7 @@ export default function CourseDetailPage() {
   const [selectedDate, setSelectedDate] = useState(days[0].value);
   const [bookingTeeTime, setBookingTeeTime] = useState<TeeTime | null>(null);
   const [showNotification, setShowNotification] = useState(false);
+  const [showAlertSimulation, setShowAlertSimulation] = useState(false);
 
   const teeTimes = useMemo(() => {
     if (!course) return [];
@@ -176,11 +178,12 @@ export default function CourseDetailPage() {
                 courseName={course.name}
                 courseId={course.id}
                 onClose={() => setShowNotification(false)}
+                onAlertSet={() => setShowAlertSimulation(true)}
               />
             ) : (
               <button
                 onClick={() => setShowNotification(true)}
-                className="w-full bg-white rounded-xl shadow-md p-4 text-left hover:shadow-lg transition-shadow flex items-center gap-3"
+                className="w-full bg-white dark:bg-slate-800 rounded-xl shadow-md p-4 text-left hover:shadow-lg transition-shadow flex items-center gap-3"
               >
                 <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -203,6 +206,17 @@ export default function CourseDetailPage() {
           teeTime={bookingTeeTime}
           course={course}
           onClose={() => setBookingTeeTime(null)}
+        />
+      )}
+
+      {/* Alert Simulation */}
+      {showAlertSimulation && (
+        <AlertSimulation
+          courseName={course.name}
+          courseId={course.id}
+          time="8:12 AM"
+          price={course.priceRange[0] + 20}
+          onDismiss={() => setShowAlertSimulation(false)}
         />
       )}
     </div>
